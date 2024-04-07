@@ -139,6 +139,7 @@ def web_extraction_page():
     input_text = st.text_area("Enter the news text:", "")  
     if st.button("Check Fake News"):
         if input_text:
+            result = {}
             with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
                 future_to_channel = {executor.submit(extract_text_from_url, url): channel for channel, url in news_channels.items()}
                 for future in concurrent.futures.as_completed(future_to_channel):
@@ -147,24 +148,27 @@ def web_extraction_page():
                         extracted_text = future.result()
                         if extracted_text:
                             found_keywords = check_keywords_in_text(extracted_text, extract_keywords(input_text))
-                            if found_keywords:
-                                st.write(f"{channel}: Found")
-                            else:
-                                st.write(f"{channel}: Not Found")
+                            result[channel] = found_keywords
                     except Exception as e:
                         st.error(f"Error processing {channel}: {e}")
-                        st.write(f"{channel}: Error")
+                        result[channel] = None
+
+            for channel, found_keywords in result.items():
+                if found_keywords:
+                    st.write(f"{channel}: Found Keywords - {', '.join(found_keywords)}")
+                else:
+                    st.write(f"{channel}: Not Found")
         else:
             st.warning("Please enter news text.")
 
 # Streamlit app
 def main():
     st.sidebar.title("Fake News Detection")
-    app_mode = st.sidebar.radio("Page Selection", ["Using ML", "Web Extraction"])
-    if app_mode == "Using ML":
-        ml_page()
-    elif app_mode == "Web Extraction":
+    app_mode = st.sidebar.radio("Page Selection", ["Web Extraction", "Using ML"])
+    if app_mode == "Web Extraction":
         web_extraction_page()
+    elif app_mode == "Using ML":
+        ml_page()
 
 def ml_page():
     st.title("Fake News Detection using ML")
